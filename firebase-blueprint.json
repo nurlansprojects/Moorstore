@@ -1,0 +1,260 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile in Moorstore",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Firebase Auth user UID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User full name"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User profile avatar URL"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role: user, seller, or admin",
+          "enum": ["user", "seller", "admin"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp ISO"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Update timestamp ISO"
+        }
+      },
+      "required": ["id", "email", "role"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Marketplace product listing",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique product ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "Product title",
+          "minLength": 2,
+          "maxLength": 150
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the product",
+          "minLength": 5,
+          "maxLength": 5000
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the product"
+        },
+        "currency": {
+          "type": "string",
+          "description": "Currency code (USD, UZS, RUB, EUR)",
+          "enum": ["USD", "UZS", "RUB", "EUR"]
+        },
+        "categoryId": {
+          "type": "string",
+          "description": "Category ID"
+        },
+        "categorySlug": {
+          "type": "string",
+          "description": "Category slug identifier"
+        },
+        "images": {
+          "type": "array",
+          "description": "List of product image URLs or data URIs"
+        },
+        "sellerId": {
+          "type": "string",
+          "description": "UID of the seller who created the listing"
+        },
+        "sellerName": {
+          "type": "string",
+          "description": "Display name of the seller"
+        },
+        "sellerEmail": {
+          "type": "string",
+          "description": "Email of the seller"
+        },
+        "sellerPhoto": {
+          "type": "string",
+          "description": "Avatar URL of the seller"
+        },
+        "contactMethods": {
+          "type": "array",
+          "description": "Configured seller contact methods (Telegram, Instagram, Email)"
+        },
+        "categoryFields": {
+          "type": "object",
+          "description": "Category-specific custom attributes"
+        },
+        "status": {
+          "type": "string",
+          "description": "Listing publication status",
+          "enum": ["active", "archived", "moderated"]
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "title", "description", "price", "currency", "categoryId", "sellerId", "contactMethods", "status"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Marketplace product category",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique category identifier"
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL slug"
+        },
+        "name": {
+          "type": "object",
+          "description": "Localized category names (ru, uz, en)"
+        },
+        "icon": {
+          "type": "string",
+          "description": "Lucide icon name identifier"
+        },
+        "order": {
+          "type": "number",
+          "description": "Display order"
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the category is active"
+        }
+      },
+      "required": ["id", "slug", "name", "isActive"]
+    },
+    "SellerApplication": {
+      "title": "SellerApplication",
+      "description": "User application to become an approved seller",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Application ID (matches userId)"
+        },
+        "userId": {
+          "type": "string",
+          "description": "UID of applicant"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "User avatar"
+        },
+        "status": {
+          "type": "string",
+          "description": "Application review status",
+          "enum": ["pending", "approved", "rejected"]
+        },
+        "note": {
+          "type": "string",
+          "description": "Application note or products to sell"
+        },
+        "appliedAt": {
+          "type": "string",
+          "description": "Application timestamp"
+        },
+        "reviewedAt": {
+          "type": "string",
+          "description": "Review timestamp"
+        },
+        "reviewedBy": {
+          "type": "string",
+          "description": "Admin UID who reviewed"
+        }
+      },
+      "required": ["id", "userId", "email", "status"]
+    },
+    "PlatformSetting": {
+      "title": "PlatformSetting",
+      "description": "Global marketplace configuration",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Setting ID"
+        },
+        "telegramSellerApplyUrl": {
+          "type": "string",
+          "description": "Telegram URL for seller applications"
+        },
+        "platformName": {
+          "type": "string",
+          "description": "Platform brand name"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last updated timestamp"
+        }
+      },
+      "required": ["id", "telegramSellerApplyUrl"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profiles and role assignments"
+    },
+    "/products/{productId}": {
+      "schema": {
+        "$ref": "#/entities/Product"
+      },
+      "description": "Stores public and moderated marketplace product listings"
+    },
+    "/categories/{categoryId}": {
+      "schema": {
+        "$ref": "#/entities/Category"
+      },
+      "description": "Stores marketplace categories"
+    },
+    "/seller_applications/{applicationId}": {
+      "schema": {
+        "$ref": "#/entities/SellerApplication"
+      },
+      "description": "Stores seller role requests for administrative review"
+    },
+    "/platform_settings/{settingId}": {
+      "schema": {
+        "$ref": "#/entities/PlatformSetting"
+      },
+      "description": "Stores platform-level configuration values"
+    }
+  }
+}

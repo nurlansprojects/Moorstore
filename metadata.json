@@ -1,0 +1,6 @@
+{
+  "name": "Moorstore",
+  "description": "Premium multi-category marketplace for discovering products and connecting directly with verified sellers.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

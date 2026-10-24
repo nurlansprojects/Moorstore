@@ -1,0 +1,146 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny all access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.providerData[0].providerId == 'google.com');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email == 'dev.nurlan@gmail.com' && request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isApprovedSeller() {
+      return isSignedIn() && (
+        isAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'seller')
+      );
+    }
+
+    // -------------------------------------------------------------
+    // USERS COLLECTION
+    // -------------------------------------------------------------
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      // User creation: Users cannot self-assign role 'seller' or 'admin' unless they are the verified admin email
+      allow create: if isOwner(userId) && isValidId(userId) &&
+        incoming().id == request.auth.uid &&
+        (
+          (request.auth.token.email == 'dev.nurlan@gmail.com' && incoming().role == 'admin') ||
+          incoming().role == 'user'
+        );
+
+      // User update: regular user cannot escalate their role. Admin can update any field.
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        incoming().role == existing().role &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'updatedAt'])
+      );
+
+      allow delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // PRODUCTS COLLECTION
+    // -------------------------------------------------------------
+    match /products/{productId} {
+      // Public can read active products. Seller or admin can read their own or any.
+      allow get: if (resource.data.status == 'active') ||
+                    (isSignedIn() && (resource.data.sellerId == request.auth.uid || isAdmin()));
+      
+      allow list: if (resource.data.status == 'active') ||
+                     (isSignedIn() && (resource.data.sellerId == request.auth.uid || isAdmin()));
+
+      // Only approved sellers or admin can create products
+      allow create: if isApprovedSeller() && isValidId(productId) &&
+        incoming().sellerId == request.auth.uid &&
+        incoming().title is string && incoming().title.size() >= 2 && incoming().title.size() <= 150 &&
+        incoming().description is string && incoming().description.size() >= 5 && incoming().description.size() <= 5000 &&
+        incoming().price is number && incoming().price >= 0 &&
+        incoming().contactMethods is list && incoming().contactMethods.size() >= 1;
+
+      // Only listing owner or admin can update
+      allow update: if isAdmin() || (
+        isSignedIn() &&
+        existing().sellerId == request.auth.uid &&
+        incoming().sellerId == existing().sellerId &&
+        incoming().title is string && incoming().title.size() >= 2 &&
+        incoming().description is string && incoming().description.size() >= 5 &&
+        incoming().contactMethods is list && incoming().contactMethods.size() >= 1
+      );
+
+      // Only listing owner or admin can delete
+      allow delete: if isAdmin() || (isSignedIn() && existing().sellerId == request.auth.uid);
+    }
+
+    // -------------------------------------------------------------
+    // CATEGORIES COLLECTION
+    // -------------------------------------------------------------
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // SELLER APPLICATIONS COLLECTION
+    // -------------------------------------------------------------
+    match /seller_applications/{applicationId} {
+      allow get: if isOwner(applicationId) || isAdmin();
+      allow list: if isAdmin();
+      
+      // Applicant can create their application with status 'pending'
+      allow create: if isSignedIn() && isOwner(applicationId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().status == 'pending';
+
+      // Only admin can approve/reject applications
+      allow update, delete: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // PLATFORM SETTINGS COLLECTION
+    // -------------------------------------------------------------
+    match /platform_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // -------------------------------------------------------------
+    // ADMINS COLLECTION
+    // -------------------------------------------------------------
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
